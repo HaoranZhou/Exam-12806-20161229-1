@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context-3.2.xsd
+           http://www.springframework.org/schema/aop
+           http://www.springframework.org/schema/aop/spring-aop-3.2.xsd">
+
+    <context:property-placeholder location="dbconfig.properties"/>  
+     <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource"
+      >  
+    <property name="driverClassName" value="${driver}" />  
+    <property name="url" value="${url}" />  
+    <property name="username" value="${username}" />  
+    <property name="password" value="${password}" />  
+   
+    </bean>
+    
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+    	<property name="dataSource" ref="dataSource"></property>
+    	<!-- 自动扫描mapper文件 -->
+    	<property name="mapperLocations" value="Map/*.xml"></property>
+    </bean>
+    
+    <!-- Dao接口所在的包 扫描接口 -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="Dao" />
+		<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"></property>
+	</bean>
+	
+	<!-- (事务管理)transaction manager, use JtaTransactionManager for global tx -->
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+    <!-- 事件 -->
+    <bean class="Event.AfterListener"></bean>
+    <bean class="Event.BeforeListener"></bean>
+    <bean class="Event.StartLinstener"></bean>
+    <bean class="Event.StopListener"></bean>
+	<!-- 配置切面类 -->
+	<bean name="Publish" class="Bean.Publish"></bean>
+	<!-- 配置拦截器 -->
+	<bean name="advice" class="Advice.AroundAdvice">
+		<property name="publish" ref="Publish"></property>
+	</bean>
+	
+	<bean name="film" class="Dao.FilmDaoImp"></bean>
+	
+	 <aop:config proxy-target-class="true">
+    	<!-- 定义切入点 切入点是连接点的集合 连接点就是需要被加强的类中的方法 -->
+    	<aop:pointcut expression="execution(public * Dao.*.*(..))" id="MyPointCut"/>
+    	<!-- 定义拦截器advice 通过拦截器把切面类中的切面织入到指定的切入点 -->
+    	<!-- 切面类织入到切入点的位置根据advice的类型决定 -->
+    	<aop:advisor advice-ref="advice" pointcut-ref="MyPointCut"/>
+    </aop:config>  
+</beans> 
